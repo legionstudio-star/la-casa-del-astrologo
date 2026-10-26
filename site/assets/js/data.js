@@ -12,7 +12,7 @@ window.HOTEL = {
     {
       id: 'doble',
       name: 'Doble Estándar',
-      img: 'assets/img/hab-doble.jpg',
+      img: 'assets/img/hab-doble.webp',
       beds: '1 cama doble',
       max: 2,
       price: 165000,
@@ -21,7 +21,7 @@ window.HOTEL = {
     {
       id: 'doble-balcon',
       name: 'Doble con Balcón',
-      img: 'assets/img/hab-balcon.jpg',
+      img: 'assets/img/hab-balcon.webp',
       beds: '1 cama doble extragrande',
       max: 2,
       price: 185000,
@@ -30,7 +30,7 @@ window.HOTEL = {
     {
       id: 'vista-piscina',
       name: 'King Vista a la Piscina',
-      img: 'assets/img/hab-deluxe.jpg',
+      img: 'assets/img/hab-deluxe.webp',
       beds: '1 cama extragrande',
       max: 2,
       price: 210000,
@@ -40,7 +40,7 @@ window.HOTEL = {
     {
       id: 'deluxe-2camas',
       name: 'Deluxe Doble · 2 camas',
-      img: 'assets/img/hab-doble-2camas.jpg',
+      img: 'assets/img/hab-doble-2camas.webp',
       beds: '2 camas dobles',
       max: 4,
       price: 260000,
@@ -49,7 +49,7 @@ window.HOTEL = {
     {
       id: 'familiar',
       name: 'Suite Familiar con Balcón',
-      img: 'assets/img/hab-familiar.jpg',
+      img: 'assets/img/hab-familiar.webp',
       beds: '2 camas dobles grandes',
       max: 4,
       price: 300000,
@@ -66,17 +66,17 @@ window.HOTEL = {
   ],
 
   gallery: [
-    { src: 'assets/img/fachada-noche.jpg', alt: 'Fachada iluminada bajo las estrellas', size: 'wide' },
-    { src: 'assets/img/piscina-cascada.jpg', alt: 'Cascada de piedra sobre la piscina', size: 'tall' },
-    { src: 'assets/img/piscina.jpg', alt: 'Piscina y patio interior' },
-    { src: 'assets/img/hab-deluxe.jpg', alt: 'Habitación king con decoración' },
-    { src: 'assets/img/balcones.jpg', alt: 'Balcones sobre la piscina', size: 'tall' },
-    { src: 'assets/img/terraza-estrellas.jpg', alt: 'Terraza mirador con la Vía Láctea', size: 'wide' },
-    { src: 'assets/img/piscina-piedra.jpg', alt: 'Muro de piedra junto a la piscina' },
-    { src: 'assets/img/hab-flores.jpg', alt: 'Habitación doble' },
-    { src: 'assets/img/patio-piscina.jpg', alt: 'Vista del patio desde el segundo piso', size: 'tall' },
-    { src: 'assets/img/fachada-dia.jpg', alt: 'Fachada de día' },
-    { src: 'assets/img/bano.jpg', alt: 'Baño privado' },
-    { src: 'assets/img/hab-estandar.jpg', alt: 'Habitación estándar' }
+    { src: 'assets/img/fachada-noche.webp', alt: 'Fachada iluminada bajo las estrellas', size: 'wide' },
+    { src: 'assets/img/piscina-cascada.webp', alt: 'Cascada de piedra sobre la piscina', size: 'tall' },
+    { src: 'assets/img/piscina.webp', alt: 'Piscina y patio interior' },
+    { src: 'assets/img/hab-deluxe.webp', alt: 'Habitación king con decoración' },
+    { src: 'assets/img/balcones.webp', alt: 'Balcones sobre la piscina', size: 'tall' },
+    { src: 'assets/img/terraza-estrellas.webp', alt: 'Terraza mirador con la Vía Láctea', size: 'wide' },
+    { src: 'assets/img/piscina-piedra.webp', alt: 'Muro de piedra junto a la piscina' },
+    { src: 'assets/img/hab-flores.webp', alt: 'Habitación doble' },
+    { src: 'assets/img/patio-piscina.webp', alt: 'Vista del patio desde el segundo piso', size: 'tall' },
+    { src: 'assets/img/fachada-dia.webp', alt: 'Fachada de día' },
+    { src: 'assets/img/bano.webp', alt: 'Baño privado' },
+    { src: 'assets/img/hab-estandar.webp', alt: 'Habitación estándar' }
   ]
 };

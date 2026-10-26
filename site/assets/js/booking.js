@@ -39,7 +39,7 @@
       const disabled = r.max < guests;
       return `<label class="room-opt ${disabled ? 'is-disabled' : ''}">
         <input type="radio" name="room" value="${r.id}" ${disabled ? 'disabled' : ''} ${state.room === r.id ? 'checked' : ''}>
-        <img src="${r.img}" alt="" loading="lazy">
+        <img src="${r.img.replace('.webp', '-m.webp')}" alt="" loading="lazy" decoding="async">
         <div class="room-opt__body">
           <strong>${r.name}</strong>
           <small>${r.beds} · hasta ${r.max} personas</small>
