@@ -311,6 +311,11 @@ body::after {
 .facts dd { margin: 4px 0 0; }
 .location__btns { display: flex; gap: 12px; flex-wrap: wrap; }
 .location__map { border-radius: var(--radius); overflow: hidden; aspect-ratio: 4/3; border: 1px solid var(--line); }
+.map-facade { width: 100%; height: 100%; border: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: radial-gradient(circle at 50% 45%, rgba(217,178,111,.18), transparent 55%), repeating-linear-gradient(0deg, transparent 0 38px, rgba(217,178,111,.07) 38px 39px), repeating-linear-gradient(90deg, transparent 0 38px, rgba(217,178,111,.07) 38px 39px), var(--night-2); color: var(--ink); }
+.map-facade__logo { width: 34px; height: 42px; color: var(--gold); }
+.map-facade__pin { width: 14px; height: 14px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 8px rgba(217,178,111,.18), 0 0 0 18px rgba(217,178,111,.08); }
+.map-facade strong { font-family: var(--serif); font-size: 26px; font-weight: 400; }
+.map-facade__cta { font-family: var(--display); font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--gold); }
 .location__map iframe { width: 100%; height: 100%; border: 0; filter: invert(.92) hue-rotate(180deg) saturate(.6) contrast(.9); }
 
 /* ===== FAQ ===== */
@@ -460,4 +465,33 @@ body::after {
   .room-card__media { aspect-ratio: 16/9; }
   .room-card__body { padding: 18px 22px; }
   .room-card ul { margin-bottom: 14px; }
+}
+
+/* ===== Ajustes móvil: rendimiento y lectura ===== */
+@media (max-width: 899px) {
+  body::after { display: none; }
+  .quickbook, .nav.is-solid, .btn--ghost, .moon-card, .sky-card { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .nav.is-solid { background: rgba(7, 8, 15, .94); }
+  .quickbook { background: rgba(13, 15, 28, .9); }
+  .hero { padding-top: 110px; padding-bottom: 32px; }
+  .hero__sub { margin-bottom: 28px; }
+  .section { padding-top: 84px; padding-bottom: 84px; }
+  .manifest__text { font-size: clamp(24px, 6.4vw, 34px); }
+  .h2 { font-size: clamp(38px, 10.5vw, 56px); }
+  .stats { gap: 18px; }
+  .stat strong { font-size: 42px; }
+  .exp-card { padding: 30px 24px; min-height: 190px; }
+  .exp-card__n { left: 24px; }
+  .marquee__inner { animation-duration: 28s; }
+  .marquee blockquote { font-size: 20px; padding: 24px; }
+  .faq summary { font-size: 20px; }
+  .direct__grid strong { font-size: 40px; }
+  .location__map { aspect-ratio: 1; }
+  .booking__panel { width: 100%; }
+  .btn, .icon-btn, .nav__burger { min-height: 44px; }
+  input, select, textarea { font-size: 16px !important; } /* evita zoom en iOS */
+}
+@media (hover: none) {
+  .room-card:hover { transform: none; }
+  .g-item::after { display: none; }
 }

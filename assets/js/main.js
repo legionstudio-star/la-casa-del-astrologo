@@ -3,6 +3,9 @@
   const H = window.HOTEL;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const money = n => '$' + Math.round(n).toLocaleString('es-CO');
+  const isMobile = window.matchMedia('(max-width: 899px)').matches;
+  // srcset con versión móvil (-m.webp) y escritorio
+  const srcset = src => `${src.replace('.webp', '-m.webp')} 720w, ${src} 1280w`;
   document.getElementById('year').textContent = new Date().getFullYear();
 
   // ---------- Render: habitaciones ----------
@@ -10,7 +13,7 @@
   track.innerHTML = H.rooms.map((r, i) => `
     <article class="room-card">
       <div class="room-card__media">
-        <img src="${r.img}" alt="${r.name}" loading="lazy">
+        <img src="${r.img.replace('.webp', '-m.webp')}" srcset="${srcset(r.img)}" sizes="(max-width: 899px) 92vw, 440px" alt="${r.name}" loading="lazy" decoding="async">
         ${r.tag ? `<span class="room-card__tag">${r.tag}</span>` : ''}
         <span class="room-card__n">0${i + 1}</span>
       </div>
@@ -35,7 +38,7 @@
   const grid = document.getElementById('galleryGrid');
   grid.innerHTML = H.gallery.map(g => `
     <figure class="g-item ${g.size ? 'g-item--' + g.size : ''}" data-full="${g.src}">
-      <div class="g-item__inner"><img src="${g.src}" alt="${g.alt}" loading="lazy"></div>
+      <div class="g-item__inner"><img src="${g.src.replace('.webp', '-m.webp')}" srcset="${srcset(g.src)}" sizes="(max-width: 899px) 50vw, 25vw" alt="${g.alt}" loading="lazy" decoding="async"></div>
     </figure>`).join('');
 
   // Lightbox
@@ -43,7 +46,7 @@
   grid.addEventListener('click', e => {
     const item = e.target.closest('.g-item');
     if (!item) return;
-    lb.querySelector('img').src = item.dataset.full;
+    lb.querySelector('img').src = isMobile ? item.dataset.full.replace('.webp', '-m.webp') : item.dataset.full;
     lb.querySelector('img').alt = item.querySelector('img').alt;
     lb.hidden = false;
     requestAnimationFrame(() => lb.classList.add('is-open'));
@@ -69,6 +72,15 @@
   }
   zod.innerHTML = `<g id="zodiacSpin">${z}</g><path d="M200 172 l6 22 22 6 -22 6 -6 22 -6 -22 -22 -6 22 -6z" class="z-core"/>`;
 
+  // ---------- Mapa bajo demanda (ahorra ~1 MB en celular) ----------
+  const mapBtn = document.getElementById('mapFacade');
+  mapBtn.addEventListener('click', () => {
+    const f = document.createElement('iframe');
+    f.title = 'Mapa del hotel'; f.src = mapBtn.dataset.src; f.loading = 'lazy';
+    f.referrerPolicy = 'no-referrer-when-downgrade';
+    mapBtn.replaceWith(f);
+  });
+
   // ---------- Cielo ----------
   Sky.renderSkySection();
 
@@ -77,18 +89,24 @@
   const ctx = canvas.getContext('2d');
   let stars = [], W, Hh, dpr, mouseX = 0, mouseY = 0, scrollY = 0, shooting = null;
   function sizeCanvas() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2);
     W = canvas.clientWidth; Hh = canvas.clientHeight;
     canvas.width = W * dpr; canvas.height = Hh * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const count = Math.round((W * Hh) / 3500);
+    const count = Math.round((W * Hh) / (isMobile ? 5200 : 3500));
     stars = Array.from({ length: count }, () => ({
       x: Math.random() * W, y: Math.random() * Hh,
       r: Math.random() * 1.2 + 0.2, z: Math.random() * 0.8 + 0.2,
       tw: Math.random() * Math.PI * 2, sp: Math.random() * 0.02 + 0.005
     }));
   }
+  let heroVisible = true;
+  new IntersectionObserver(([e]) => {
+    const was = heroVisible; heroVisible = e.isIntersecting;
+    if (heroVisible && !was && !reduced) requestAnimationFrame(drawStars);
+  }).observe(canvas);
   function drawStars() {
+    if (!heroVisible && !reduced) return; // pausa cuando el hero no se ve
     ctx.clearRect(0, 0, W, Hh);
     for (const s of stars) {
       s.tw += s.sp;
@@ -115,8 +133,9 @@
   }
   sizeCanvas();
   if (reduced) drawStars();
-  window.addEventListener('resize', sizeCanvas);
-  window.addEventListener('pointermove', e => { mouseX = e.clientX / innerWidth - 0.5; mouseY = e.clientY / innerHeight - 0.5; });
+  let lastW = innerWidth;
+  window.addEventListener('resize', () => { if (Math.abs(innerWidth - lastW) > 40 || !isMobile) { lastW = innerWidth; sizeCanvas(); } });
+  if (!isMobile) window.addEventListener('pointermove', e => { mouseX = e.clientX / innerWidth - 0.5; mouseY = e.clientY / innerHeight - 0.5; });
   if (!reduced) requestAnimationFrame(drawStars);
 
   // Marquesina infinita: duplicar opiniones
@@ -164,10 +183,10 @@
   lenis.stop();
   const intro = gsap.timeline({ defaults: { ease: 'power3.out' } });
   intro
-    .fromTo('.loader .draw', { strokeDasharray: 400, strokeDashoffset: 400 }, { strokeDashoffset: 0, duration: 1.4, stagger: 0.05, ease: 'power2.inOut' })
+    .fromTo('.loader .draw', { strokeDasharray: 400, strokeDashoffset: 400 }, { strokeDashoffset: 0, duration: isMobile ? 0.8 : 1.4, stagger: 0.04, ease: 'power2.inOut' })
     .from('.loader__name', { opacity: 0, y: 10, duration: 0.6 }, '-=0.6')
-    .to('.loader__bar span', { scaleX: 1, duration: 0.9, ease: 'power2.inOut' }, '-=0.8')
-    .to('.loader', { clipPath: 'inset(0 0 100% 0)', duration: 1, ease: 'expo.inOut' })
+    .to('.loader__bar span', { scaleX: 1, duration: isMobile ? 0.5 : 0.9, ease: 'power2.inOut' }, '-=0.6')
+    .to('.loader', { clipPath: 'inset(0 0 100% 0)', duration: isMobile ? 0.7 : 1, ease: 'expo.inOut' })
     .from('.hero__img', { scale: 1.35, duration: 2.2, ease: 'expo.out' }, '-=0.8')
     .from('.hero__title .line > span', { yPercent: 110, duration: 1.2, stagger: 0.12, ease: 'expo.out' }, '-=2')
     .from(['.hero__eyebrow', '.hero__sub'], { opacity: 0, y: 20, duration: 1, stagger: 0.1 }, '-=1.4')
@@ -240,7 +259,7 @@
   // Galería: revelado escalonado + parallax interno
   gsap.utils.toArray('.g-item').forEach((g, i) => {
     gsap.fromTo(g, { clipPath: 'inset(100% 0% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.3, ease: 'expo.out', delay: (i % 3) * 0.08, scrollTrigger: { trigger: g, start: 'top 92%' } });
-    gsap.fromTo(g.querySelector('img'), { yPercent: -8 }, { yPercent: 8, ease: 'none', scrollTrigger: { trigger: g, start: 'top bottom', end: 'bottom top', scrub: true } });
+    if (!isMobile) gsap.fromTo(g.querySelector('img'), { yPercent: -8 }, { yPercent: 8, ease: 'none', scrollTrigger: { trigger: g, start: 'top bottom', end: 'bottom top', scrub: true } });
   });
 
   // Opiniones / reserva directa / ubicación / faq
