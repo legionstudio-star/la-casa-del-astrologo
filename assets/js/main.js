@@ -1,53 +1,62 @@
-// Animaciones, scroll suave y render de secciones.
+// Render de secciones, coreografía de scroll (día → noche) e interacciones.
 (function () {
   const H = window.HOTEL;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const money = n => '$' + Math.round(n).toLocaleString('es-CO');
   const isMobile = window.matchMedia('(max-width: 899px)').matches;
-  // srcset con versión móvil (-m.webp) y escritorio
-  const srcset = src => `${src.replace('.webp', '-m.webp')} 720w, ${src} 1280w`;
+  const money = n => '$' + Math.round(n).toLocaleString('es-CO');
+  const mobileSrc = src => src.replace('.webp', '-m.webp');
+  const srcset = src => `${mobileSrc(src)} 720w, ${src} 1280w`;
+  const direct = p => p * (1 - H.directDiscount);
   document.getElementById('year').textContent = new Date().getFullYear();
 
-  // ---------- Render: habitaciones ----------
+  // ---------- Habitaciones ----------
   const track = document.getElementById('roomsTrack');
   track.innerHTML = H.rooms.map((r, i) => `
-    <article class="room-card">
-      <div class="room-card__media">
-        <img src="${r.img.replace('.webp', '-m.webp')}" srcset="${srcset(r.img)}" sizes="(max-width: 899px) 92vw, 440px" alt="${r.name}" loading="lazy" decoding="async">
-        ${r.tag ? `<span class="room-card__tag">${r.tag}</span>` : ''}
-        <span class="room-card__n">0${i + 1}</span>
+    <article class="room">
+      <div class="room__media">
+        <img src="${mobileSrc(r.img)}" srcset="${srcset(r.img)}" sizes="(max-width: 899px) 88vw, 400px" alt="${r.name}" loading="lazy" decoding="async">
+        ${r.tag ? `<span class="room__tag">${r.tag}</span>` : ''}
       </div>
-      <div class="room-card__body">
+      <div class="room__body">
+        <span class="room__n">N.º 0${i + 1}</span>
         <h3>${r.name}</h3>
-        <p class="muted">${r.beds} · hasta ${r.max} personas</p>
-        <ul>${r.perks.map(p => `<li>${p}</li>`).join('')}</ul>
-        <div class="room-card__foot">
-          <div><small>Desde</small><strong>${money(r.price * (1 - H.directDiscount))}</strong><small>/ noche</small></div>
-          <button class="btn btn--line" data-open-booking data-room="${r.id}">Reservar <svg><use href="#i-arrow"/></svg></button>
+        <p class="room__meta">${r.beds} · hasta ${r.max} personas</p>
+        <p class="room__perks">${r.perks.join(' · ')}</p>
+        <div class="room__foot">
+          <div class="room__price">
+            <s>${money(r.price)}</s>
+            <strong>${money(direct(r.price))}</strong>
+            <small>por noche, reserva directa</small>
+          </div>
+          <button class="btn btn--solid btn--sm" data-open-booking data-room="${r.id}">Elegir</button>
         </div>
       </div>
     </article>`).join('') + `
-    <article class="room-card room-card--end">
-      <p class="eyebrow">¿Grupo o evento íntimo?</p>
-      <h3>Reserva el hotel completo</h3>
-      <p class="muted">Retiros, cumpleaños tranquilos o viajes de amigos. Te armamos una tarifa especial.</p>
-      <a class="btn btn--gold" href="https://wa.me/${H.whatsapp}?text=${encodeURIComponent('Hola, quiero cotizar el hotel completo para un grupo')}" target="_blank" rel="noopener">Cotizar por WhatsApp</a>
+    <article class="room room--group">
+      <p class="label">Grupos y celebraciones</p>
+      <h3>¿Vienen varios? <em>Reserva la casa entera.</em></h3>
+      <p>Retiros, cumpleaños tranquilos o viajes de amigos con tarifa especial.</p>
+      <a class="btn btn--line" href="https://wa.me/${H.whatsapp}?text=${encodeURIComponent('Hola, quiero cotizar el hotel completo para un grupo')}" target="_blank" rel="noopener">Cotizar por WhatsApp</a>
     </article>`;
 
-  // ---------- Render: galería ----------
+  // Precio ancla en la barra fija
+  document.getElementById('dockPrice').textContent = money(Math.min(...H.rooms.map(r => direct(r.price))));
+
+  // ---------- Galería ----------
   const grid = document.getElementById('galleryGrid');
-  grid.innerHTML = H.gallery.map(g => `
-    <figure class="g-item ${g.size ? 'g-item--' + g.size : ''}" data-full="${g.src}">
-      <div class="g-item__inner"><img src="${g.src.replace('.webp', '-m.webp')}" srcset="${srcset(g.src)}" sizes="(max-width: 899px) 50vw, 25vw" alt="${g.alt}" loading="lazy" decoding="async"></div>
+  grid.innerHTML = H.gallery.map((g, i) => `
+    <figure class="g ${g.size ? 'g--' + g.size : ''}" data-full="${g.src}">
+      <div class="g__img"><img src="${mobileSrc(g.src)}" srcset="${srcset(g.src)}" sizes="(max-width: 899px) 50vw, 25vw" alt="${g.alt}" loading="lazy" decoding="async"></div>
+      <figcaption><span>${String(i + 1).padStart(2, '0')}</span> ${g.alt}</figcaption>
     </figure>`).join('');
 
-  // Lightbox
   const lb = document.getElementById('lightbox');
   grid.addEventListener('click', e => {
-    const item = e.target.closest('.g-item');
+    const item = e.target.closest('.g');
     if (!item) return;
-    lb.querySelector('img').src = isMobile ? item.dataset.full.replace('.webp', '-m.webp') : item.dataset.full;
-    lb.querySelector('img').alt = item.querySelector('img').alt;
+    const img = lb.querySelector('img');
+    img.src = isMobile ? mobileSrc(item.dataset.full) : item.dataset.full;
+    img.alt = item.querySelector('img').alt;
     lb.hidden = false;
     requestAnimationFrame(() => lb.classList.add('is-open'));
     window.lenis && window.lenis.stop();
@@ -56,23 +65,41 @@
   lb.addEventListener('click', closeLb);
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !lb.hidden) closeLb(); });
 
-  // ---------- Render: rueda zodiacal ----------
-  const zod = document.getElementById('zodiac');
+  // ---------- Rueda zodiacal ----------
   const signs = ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓'];
-  let z = '<circle cx="200" cy="200" r="190" class="z-ring"/><circle cx="200" cy="200" r="150" class="z-ring"/><circle cx="200" cy="200" r="100" class="z-ring z-ring--thin"/><circle cx="200" cy="200" r="40" class="z-ring z-ring--thin"/>';
+  let z = '<circle cx="200" cy="200" r="196" class="w-line"/><circle cx="200" cy="200" r="160" class="w-line"/><circle cx="200" cy="200" r="104" class="w-line w-thin"/><circle cx="200" cy="200" r="44" class="w-line w-thin"/>';
   signs.forEach((s, i) => {
     const a = (i * 30 - 90) * Math.PI / 180, a2 = ((i * 30 + 15) - 90) * Math.PI / 180;
-    z += `<line x1="${200 + 150 * Math.cos(a)}" y1="${200 + 150 * Math.sin(a)}" x2="${200 + 190 * Math.cos(a)}" y2="${200 + 190 * Math.sin(a)}" class="z-ring"/>`;
-    z += `<text x="${200 + 170 * Math.cos(a2)}" y="${200 + 170 * Math.sin(a2)}" class="z-sign">${s}︎</text>`;
-    z += `<line x1="200" y1="200" x2="${200 + 100 * Math.cos(a2)}" y2="${200 + 100 * Math.sin(a2)}" class="z-ring z-ring--thin"/>`;
+    z += `<line x1="${200 + 160 * Math.cos(a)}" y1="${200 + 160 * Math.sin(a)}" x2="${200 + 196 * Math.cos(a)}" y2="${200 + 196 * Math.sin(a)}" class="w-line"/>`;
+    z += `<text x="${200 + 178 * Math.cos(a2)}" y="${200 + 178 * Math.sin(a2)}" class="w-sign">${s}︎</text>`;
+    z += `<line x1="200" y1="200" x2="${200 + 104 * Math.cos(a)}" y2="${200 + 104 * Math.sin(a)}" class="w-line w-thin"/>`;
   });
   for (let i = 0; i < 72; i++) {
-    const a = i * 5 * Math.PI / 180, r1 = i % 6 === 0 ? 140 : 145;
-    z += `<line x1="${200 + r1 * Math.cos(a)}" y1="${200 + r1 * Math.sin(a)}" x2="${200 + 150 * Math.cos(a)}" y2="${200 + 150 * Math.sin(a)}" class="z-ring z-ring--thin"/>`;
+    const a = i * 5 * Math.PI / 180, r1 = i % 6 === 0 ? 148 : 154;
+    z += `<line x1="${200 + r1 * Math.cos(a)}" y1="${200 + r1 * Math.sin(a)}" x2="${200 + 160 * Math.cos(a)}" y2="${200 + 160 * Math.sin(a)}" class="w-line w-thin"/>`;
   }
-  zod.innerHTML = `<g id="zodiacSpin">${z}</g><path d="M200 172 l6 22 22 6 -22 6 -6 22 -6 -22 -22 -6 22 -6z" class="z-core"/>`;
+  document.getElementById('zodiac').innerHTML = `<g id="zodiacSpin">${z}</g><path d="M200 168 l7 25 25 7 -25 7 -7 25 -7 -25 -25 -7 25 -7z" class="w-core"/>`;
 
-  // ---------- Mapa bajo demanda (ahorra ~1 MB en celular) ----------
+  // ---------- Cielo, calendario y signo ----------
+  Sky.renderSkySection();
+  const isoLocal = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  Sky.calendar({ onRange: (a, b) => setTimeout(() => Booking.open({ checkin: isoLocal(a), checkout: isoLocal(b) }), 350) });
+
+  const daySel = document.getElementById('signDay');
+  daySel.innerHTML = Array.from({ length: 31 }, (_, i) => `<option>${i + 1}</option>`).join('');
+  document.getElementById('signForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const f = e.target;
+    const s = Sky.sunSign(+f.d.value, +f.m.value);
+    const card = document.getElementById('signCard');
+    document.getElementById('signGlyph').textContent = s.g + '︎';
+    document.getElementById('signMeta').textContent = `Tu signo solar · ${s.e}`;
+    document.getElementById('signName').textContent = s.n;
+    document.getElementById('signText').textContent = s.t;
+    card.classList.remove('is-revealed'); void card.offsetWidth; card.classList.add('is-revealed');
+  });
+
+  // ---------- Mapa bajo demanda ----------
   const mapBtn = document.getElementById('mapFacade');
   mapBtn.addEventListener('click', () => {
     const f = document.createElement('iframe');
@@ -81,196 +108,183 @@
     mapBtn.replaceWith(f);
   });
 
-  // ---------- Cielo ----------
-  Sky.renderSkySection();
-
-  // ---------- Starfield ----------
-  const canvas = document.getElementById('stars');
-  const ctx = canvas.getContext('2d');
-  let stars = [], W, Hh, dpr, mouseX = 0, mouseY = 0, scrollY = 0, shooting = null;
-  function sizeCanvas() {
-    dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2);
-    W = canvas.clientWidth; Hh = canvas.clientHeight;
-    canvas.width = W * dpr; canvas.height = Hh * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const count = Math.round((W * Hh) / (isMobile ? 5200 : 3500));
-    stars = Array.from({ length: count }, () => ({
-      x: Math.random() * W, y: Math.random() * Hh,
-      r: Math.random() * 1.2 + 0.2, z: Math.random() * 0.8 + 0.2,
-      tw: Math.random() * Math.PI * 2, sp: Math.random() * 0.02 + 0.005
-    }));
-  }
-  let heroVisible = true;
-  new IntersectionObserver(([e]) => {
-    const was = heroVisible; heroVisible = e.isIntersecting;
-    if (heroVisible && !was && !reduced) requestAnimationFrame(drawStars);
-  }).observe(canvas);
-  function drawStars() {
-    if (!heroVisible && !reduced) return; // pausa cuando el hero no se ve
-    ctx.clearRect(0, 0, W, Hh);
-    for (const s of stars) {
-      s.tw += s.sp;
-      const a = 0.35 + Math.sin(s.tw) * 0.35 + s.z * 0.3;
-      const x = s.x + mouseX * 18 * s.z;
-      const y = ((s.y - scrollY * 0.35 * s.z) % Hh + Hh) % Hh + mouseY * 12 * s.z;
-      ctx.beginPath();
-      ctx.arc(x, y, s.r * s.z * 1.4, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255, 244, 220, ${a})`;
-      ctx.fill();
-    }
-    // Estrella fugaz ocasional
-    if (!shooting && Math.random() < 0.004) shooting = { x: Math.random() * W * 0.7 + W * 0.2, y: Math.random() * Hh * 0.4, l: 0 };
-    if (shooting) {
-      shooting.l += 14;
-      const x = shooting.x - shooting.l, y = shooting.y + shooting.l * 0.45;
-      const g = ctx.createLinearGradient(x, y, x + 120, y - 54);
-      g.addColorStop(0, 'rgba(255,240,210,.9)'); g.addColorStop(1, 'rgba(255,240,210,0)');
-      ctx.strokeStyle = g; ctx.lineWidth = 1.4;
-      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 120, y - 54); ctx.stroke();
-      if (shooting.l > 420) shooting = null;
-    }
-    if (!reduced) requestAnimationFrame(drawStars);
-  }
-  sizeCanvas();
-  if (reduced) drawStars();
-  let lastW = innerWidth;
-  window.addEventListener('resize', () => { if (Math.abs(innerWidth - lastW) > 40 || !isMobile) { lastW = innerWidth; sizeCanvas(); } });
-  if (!isMobile) window.addEventListener('pointermove', e => { mouseX = e.clientX / innerWidth - 0.5; mouseY = e.clientY / innerHeight - 0.5; });
-  if (!reduced) requestAnimationFrame(drawStars);
-
-  // Marquesina infinita: duplicar opiniones
-  const mq = document.querySelector('.marquee__inner');
-  mq.innerHTML += mq.innerHTML;
-
-  // ---------- Nav ----------
+  // ---------- Menú ----------
   const nav = document.getElementById('nav');
   const burger = document.getElementById('burger');
   const mm = document.getElementById('mobileMenu');
-  burger.addEventListener('click', () => {
-    const open = mm.classList.toggle('is-open');
-    burger.setAttribute('aria-expanded', open);
+  const toggleMenu = open => {
+    mm.classList.toggle('is-open', open);
     burger.classList.toggle('is-open', open);
-  });
-  mm.addEventListener('click', e => { if (e.target.tagName === 'A') { mm.classList.remove('is-open'); burger.classList.remove('is-open'); } });
+    burger.setAttribute('aria-expanded', open);
+    document.documentElement.classList.toggle('menu-open', open);
+  };
+  burger.addEventListener('click', () => toggleMenu(!mm.classList.contains('is-open')));
+  mm.addEventListener('click', e => { if (e.target.closest('a')) toggleMenu(false); });
 
-  // ---------- Sin GSAP o movimiento reducido ----------
-  const loader = document.getElementById('loader');
+  // ---------- Cielo estrellado (canvas fijo) ----------
+  const canvas = document.getElementById('stars');
+  const ctx = canvas.getContext('2d');
+  let stars = [], W, Hh, running = false, shooting = null;
+  function sizeCanvas() {
+    const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2);
+    W = innerWidth; Hh = innerHeight;
+    canvas.width = W * dpr; canvas.height = Hh * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    stars = Array.from({ length: Math.round((W * Hh) / (isMobile ? 4200 : 2800)) }, () => ({
+      x: Math.random() * W, y: Math.random() * Hh, r: Math.random() * 1.1 + 0.25,
+      tw: Math.random() * 6.3, sp: Math.random() * 0.025 + 0.004
+    }));
+  }
+  function draw() {
+    if (!running) return;
+    ctx.clearRect(0, 0, W, Hh);
+    ctx.fillStyle = '#f6eedf';
+    for (const s of stars) {
+      s.tw += s.sp;
+      ctx.globalAlpha = Math.max(0, 0.35 + Math.sin(s.tw) * 0.35 + 0.3 * (s.r / 1.35));
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.283); ctx.fill();
+    }
+    if (!shooting && Math.random() < 0.003) shooting = { x: Math.random() * W * 0.6 + W * 0.35, y: Math.random() * Hh * 0.35, l: 0 };
+    if (shooting) {
+      shooting.l += 13;
+      const x = shooting.x - shooting.l, y = shooting.y + shooting.l * 0.42;
+      const g = ctx.createLinearGradient(x, y, x + 110, y - 46);
+      g.addColorStop(0, 'rgba(255,244,222,.95)'); g.addColorStop(1, 'rgba(255,244,222,0)');
+      ctx.globalAlpha = 1; ctx.strokeStyle = g; ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 110, y - 46); ctx.stroke();
+      if (shooting.l > 380) shooting = null;
+    }
+    requestAnimationFrame(draw);
+  }
+  function setSky(op) {
+    canvas.style.opacity = op;
+    const on = op > 0.02;
+    if (reduced) { if (on) { running = true; draw(); running = false; } return; }
+    if (on && !running) { running = true; requestAnimationFrame(draw); }
+    if (!on) running = false;
+  }
+  sizeCanvas();
+  let lastW = innerWidth;
+  addEventListener('resize', () => { if (!isMobile || Math.abs(innerWidth - lastW) > 40) { lastW = innerWidth; sizeCanvas(); } });
+
+  // Color del navegador según día / noche
+  const theme = document.querySelector('meta[name="theme-color"]');
+  const setNight = on => {
+    document.documentElement.classList.toggle('is-night', on);
+    theme.setAttribute('content', on ? '#0b0d18' : '#efe6d6');
+  };
+
+  const curtain = document.getElementById('curtain');
+  const dock = document.getElementById('dock');
+  const nightEl = document.querySelector('.night');
+
+  // ---------- Sin GSAP o con movimiento reducido ----------
+  function basicScroll() {
+    const y = scrollY;
+    nav.classList.toggle('is-scrolled', y > 30);
+    document.documentElement.classList.toggle('is-scrolled-top', y > 30);
+    dock.classList.toggle('is-visible', y > innerHeight * 0.8);
+    const n = nightEl.getBoundingClientRect().top < innerHeight * 0.5;
+    setNight(n); setSky(n ? 1 : 0);
+  }
   if (!window.gsap || reduced) {
-    loader.remove();
+    curtain.remove();
     document.documentElement.classList.add('no-motion');
-    window.addEventListener('scroll', () => nav.classList.toggle('is-solid', scrollY > 40));
-    document.querySelectorAll('[data-count]').forEach(el => {
-      const p = el.dataset.prefix || '', s = el.dataset.suffix || '', v = +el.dataset.count;
-      el.textContent = p + v.toLocaleString('es-CO', { minimumFractionDigits: +(el.dataset.dec || 0) }) + s;
-    });
+    addEventListener('scroll', basicScroll, { passive: true });
+    basicScroll();
     return;
   }
 
   gsap.registerPlugin(ScrollTrigger);
-
-  // Scroll suave
-  const lenis = new Lenis({ duration: 1.2, easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)), smoothWheel: true });
+  const lenis = new Lenis({ duration: 1.15, easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
   window.lenis = lenis;
-  lenis.on('scroll', e => { ScrollTrigger.update(); scrollY = e.scroll; nav.classList.toggle('is-solid', e.scroll > 40); });
+  lenis.on('scroll', e => {
+    ScrollTrigger.update();
+    nav.classList.toggle('is-scrolled', e.scroll > 30);
+    document.documentElement.classList.toggle('is-scrolled-top', e.scroll > 30);
+    dock.classList.toggle('is-visible', e.scroll > innerHeight * 0.8);
+  });
   gsap.ticker.add(t => lenis.raf(t * 1000));
   gsap.ticker.lagSmoothing(0);
   document.querySelectorAll('a[href^="#"]').forEach(a => a.addEventListener('click', e => {
     const id = a.getAttribute('href');
-    if (id.length > 1 && document.querySelector(id)) { e.preventDefault(); lenis.scrollTo(id, { offset: -70, duration: 1.6 }); }
+    if (id.length > 1 && document.querySelector(id)) { e.preventDefault(); lenis.scrollTo(id, { offset: -60, duration: 1.6 }); }
   }));
 
-  // Loader → intro
+  // Entrada: cortina corta, el arco se abre y el título sube línea por línea
   lenis.stop();
-  const intro = gsap.timeline({ defaults: { ease: 'power3.out' } });
-  intro
-    .fromTo('.loader .draw', { strokeDasharray: 400, strokeDashoffset: 400 }, { strokeDashoffset: 0, duration: isMobile ? 0.8 : 1.4, stagger: 0.04, ease: 'power2.inOut' })
-    .from('.loader__name', { opacity: 0, y: 10, duration: 0.6 }, '-=0.6')
-    .to('.loader__bar span', { scaleX: 1, duration: isMobile ? 0.5 : 0.9, ease: 'power2.inOut' }, '-=0.6')
-    .to('.loader', { clipPath: 'inset(0 0 100% 0)', duration: isMobile ? 0.7 : 1, ease: 'expo.inOut' })
-    .from('.hero__img', { scale: 1.35, duration: 2.2, ease: 'expo.out' }, '-=0.8')
-    .from('.hero__title .line > span', { yPercent: 110, duration: 1.2, stagger: 0.12, ease: 'expo.out' }, '-=2')
-    .from(['.hero__eyebrow', '.hero__sub'], { opacity: 0, y: 20, duration: 1, stagger: 0.1 }, '-=1.4')
-    .from('.quickbook', { opacity: 0, y: 40, duration: 1 }, '-=1')
-    .from('.nav', { y: -30, opacity: 0, duration: 0.8 }, '-=1')
-    .add(() => { loader.remove(); lenis.start(); });
+  gsap.timeline({ defaults: { ease: 'expo.out' } })
+    .to('#curtain svg', { opacity: 1, scale: 1, duration: 0.5, ease: 'power2.out' })
+    .to('#curtain', { yPercent: -100, duration: isMobile ? 0.8 : 1, ease: 'expo.inOut' }, '+=0.15')
+    .from('.hero__arch', { clipPath: 'inset(100% 0% 0% 0% round 999px 999px 0 0)', duration: 1.6 }, '-=0.55')
+    .from('.hero__arch img', { scale: 1.3, duration: 2 }, '<')
+    .from('.hero__title .ln > span', { yPercent: 105, duration: 1.2, stagger: 0.09 }, '<0.1')
+    .from(['.hero__kicker', '.hero__lead', '.quickbook', '.assurance'], { opacity: 0, y: 24, duration: 1, stagger: 0.08 }, '<0.35')
+    .from(['.seal', '.proof', '.caption'], { opacity: 0, duration: 1 }, '<0.2')
+    .from(['.nav', '.topline'], { opacity: 0, duration: 0.8 }, '<')
+    .add(() => { curtain.remove(); lenis.start(); });
 
-  // Hero: parallax y desvanecido al hacer scroll
-  gsap.to('.hero__img', { yPercent: 18, scale: 1.12, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
-  gsap.to('.hero__content', { yPercent: -30, opacity: 0, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: '70% top', scrub: true } });
-  gsap.to('.hero__veil', { opacity: 1, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
+  // Hero: parallax suave y sello que gira
+  gsap.to('.hero__arch img', { yPercent: 12, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
+  gsap.to('.seal__text', { rotation: 360, svgOrigin: '100 100', ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: '+=1500', scrub: 1 } });
 
-  // Manifiesto: palabras que se iluminan con el scroll
-  const mt = document.getElementById('manifestText');
-  mt.innerHTML = mt.textContent.split(' ').map(w => `<span class="w">${w}</span>`).join(' ');
-  gsap.fromTo('#manifestText .w', { opacity: 0.12 }, { opacity: 1, stagger: 0.1, ease: 'none', scrollTrigger: { trigger: mt, start: 'top 80%', end: 'bottom 45%', scrub: true } });
-
-  // Contadores
-  document.querySelectorAll('[data-count]').forEach(el => {
-    const v = +el.dataset.count, dec = +(el.dataset.dec || 0), p = el.dataset.prefix || '', s = el.dataset.suffix || '';
-    const o = { n: 0 };
-    gsap.to(o, { n: v, duration: 2, ease: 'power2.out', scrollTrigger: { trigger: el, start: 'top 88%', once: true },
-      onUpdate: () => (el.textContent = p + o.n.toLocaleString('es-CO', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + s) });
+  // Títulos de sección: cada línea sube
+  document.querySelectorAll('.display').forEach(h => {
+    h.innerHTML = h.innerHTML.split('<br>').map(l => `<span class="ln"><span>${l}</span></span>`).join('');
+    gsap.from(h.querySelectorAll('.ln > span'), { yPercent: 105, duration: 1.1, stagger: 0.08, ease: 'expo.out', scrollTrigger: { trigger: h, start: 'top 88%' } });
   });
-  gsap.from('.stat', { y: 40, opacity: 0, stagger: 0.12, duration: 1, ease: 'power3.out', scrollTrigger: { trigger: '.stats', start: 'top 85%' } });
+  gsap.utils.toArray('.label:not(.hero__kicker)').forEach(l => gsap.from(l, { opacity: 0, x: -14, duration: 0.8, scrollTrigger: { trigger: l, start: 'top 92%' } }));
 
-  // Títulos palabra por palabra
-  document.querySelectorAll('.split-words').forEach(h => {
-    h.innerHTML = h.textContent.trim().split(' ').map(w => `<span class="sw"><span>${w}</span></span>`).join(' ');
-    gsap.from(h.querySelectorAll('.sw > span'), { yPercent: 110, duration: 1.1, stagger: 0.06, ease: 'expo.out', scrollTrigger: { trigger: h, start: 'top 85%' } });
-  });
+  // Intro: el texto grande se ilumina mientras se lee
+  const big = document.querySelector('.intro__big');
+  big.innerHTML = big.innerHTML.replace(/(<em>.*?<\/em>|[^\s<]+)/g, '<span class="w">$1</span>');
+  gsap.fromTo('.intro__big .w', { opacity: 0.16 }, { opacity: 1, stagger: 0.08, ease: 'none', scrollTrigger: { trigger: big, start: 'top 80%', end: 'bottom 50%', scrub: true } });
+  gsap.from('.intro__side > *', { opacity: 0, y: 30, stagger: 0.12, duration: 1, scrollTrigger: { trigger: '.intro__side', start: 'top 80%' } });
 
-  // Revelado de imágenes con clip-path
-  document.querySelectorAll('.reveal-clip').forEach(el => {
-    gsap.fromTo(el, { clipPath: 'inset(18% 18% 18% 18% round 24px)' }, { clipPath: 'inset(0% 0% 0% 0% round 24px)', ease: 'none', scrollTrigger: { trigger: el, start: 'top 90%', end: 'top 30%', scrub: true } });
-    const img = el.querySelector('img');
-    if (img) gsap.fromTo(img, { scale: 1.3, yPercent: -6 }, { scale: 1, yPercent: 6, ease: 'none', scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: true } });
+  // Razones: las imágenes se abren en arco
+  gsap.utils.toArray('.arch-reveal').forEach(m => {
+    gsap.fromTo(m, { clipPath: 'inset(35% 12% 0% 12% round 999px 999px 0 0)' }, { clipPath: 'inset(0% 0% 0% 0% round 999px 999px 0 0)', ease: 'none', scrollTrigger: { trigger: m, start: 'top 95%', end: 'top 35%', scrub: true } });
+    gsap.fromTo(m.querySelector('img'), { scale: 1.25, yPercent: -5 }, { scale: 1, yPercent: 5, ease: 'none', scrollTrigger: { trigger: m, start: 'top bottom', end: 'bottom top', scrub: true } });
   });
-  gsap.from('.split__copy > *:not(h2), .ticks li', { y: 30, opacity: 0, stagger: 0.08, duration: 1, ease: 'power3.out', scrollTrigger: { trigger: '.split__copy', start: 'top 75%' } });
+  gsap.utils.toArray('.reason__copy').forEach(c => gsap.from(c.querySelectorAll('.reason__n, p, .link-arrow'), { opacity: 0, y: 26, stagger: 0.1, duration: 1, scrollTrigger: { trigger: c, start: 'top 80%' } }));
+  gsap.to('#zodiacSpin', { rotation: 120, svgOrigin: '200 200', ease: 'none', scrollTrigger: { trigger: '.reason__media--wheel', start: 'top bottom', end: 'bottom top', scrub: 1 } });
 
-  // Habitaciones: scroll horizontal fijado (escritorio) / aparición (móvil)
-  const mm2 = gsap.matchMedia();
-  mm2.add('(min-width: 900px)', () => {
-    const dist = () => track.scrollWidth - window.innerWidth + parseFloat(getComputedStyle(track).paddingLeft);
-    const tween = gsap.to(track, { x: () => -dist(), ease: 'none', scrollTrigger: { trigger: '.rooms', start: 'top top', end: () => '+=' + dist(), pin: '.rooms__pin', scrub: 1, invalidateOnRefresh: true, anticipatePin: 1 } });
-    track.querySelectorAll('.room-card__media img').forEach(img => {
-      gsap.fromTo(img, { xPercent: -8, scale: 1.15 }, { xPercent: 8, ease: 'none', scrollTrigger: { trigger: img.closest('.room-card'), containerAnimation: tween, start: 'left right', end: 'right left', scrub: true } });
-    });
-    gsap.from('.room-card', { opacity: 0, y: 60, stagger: 0.1, duration: 1, ease: 'power3.out', scrollTrigger: { trigger: '.rooms', start: 'top 70%' } });
+  // Habitaciones: recorrido horizontal en escritorio
+  const mq = gsap.matchMedia();
+  mq.add('(min-width: 900px)', () => {
+    const dist = () => track.scrollWidth - innerWidth + 80;
+    const tween = gsap.to(track, { x: () => -dist(), ease: 'none', scrollTrigger: { trigger: '.rooms', start: 'top top', end: () => '+=' + dist(), pin: '.rooms__pin', scrub: 0.8, invalidateOnRefresh: true, anticipatePin: 1 } });
+    track.querySelectorAll('.room__media img').forEach(img => gsap.fromTo(img, { xPercent: -6 }, { xPercent: 6, ease: 'none', scrollTrigger: { trigger: img.closest('.room'), containerAnimation: tween, start: 'left right', end: 'right left', scrub: true } }));
   });
-  mm2.add('(max-width: 899px)', () => {
-    gsap.utils.toArray('.room-card').forEach(c => gsap.from(c, { opacity: 0, y: 50, duration: 0.9, ease: 'power3.out', scrollTrigger: { trigger: c, start: 'top 90%' } }));
+  mq.add('(max-width: 899px)', () => {
+    gsap.utils.toArray('.room').forEach(r => gsap.from(r, { opacity: 0, y: 40, duration: 0.9, scrollTrigger: { trigger: r, start: 'top 90%' } }));
   });
 
-  // Rueda zodiacal girando con el scroll
-  gsap.to('#zodiacSpin', { rotation: 180, svgOrigin: '200 200', ease: 'none', scrollTrigger: { trigger: '.astro', start: 'top bottom', end: 'bottom top', scrub: 1 } });
-  gsap.from('.astro__wheel', { scale: 0.6, opacity: 0, duration: 1.6, ease: 'expo.out', scrollTrigger: { trigger: '.astro', start: 'top 70%' } });
-  gsap.from('.astro__grid span', { opacity: 0, y: 20, stagger: 0.07, duration: 0.8, ease: 'power3.out', scrollTrigger: { trigger: '.astro__grid', start: 'top 85%' } });
-  gsap.from('.price-tag', { opacity: 0, y: 30, duration: 1, ease: 'power3.out', scrollTrigger: { trigger: '.price-tag', start: 'top 90%' } });
+  // Desierto y opiniones
+  gsap.utils.toArray('.desert__list li').forEach(li => gsap.from(li, { opacity: 0, y: 30, duration: 0.9, scrollTrigger: { trigger: li, start: 'top 90%' } }));
+  gsap.from('.voices__score strong', { yPercent: 40, opacity: 0, duration: 1.4, ease: 'expo.out', scrollTrigger: { trigger: '.voices', start: 'top 75%' } });
+  gsap.from('.voices blockquote', { opacity: 0, y: 30, stagger: 0.15, duration: 1, scrollTrigger: { trigger: '.voices__quotes', start: 'top 80%' } });
 
-  // Cielo
-  gsap.from('.sky__grid > *', { y: 60, opacity: 0, stagger: 0.15, duration: 1.1, ease: 'power3.out', scrollTrigger: { trigger: '.sky__grid', start: 'top 80%' } });
-  gsap.from('#moonNow', { rotate: -40, scale: 0.7, duration: 1.6, ease: 'expo.out', scrollTrigger: { trigger: '.sky__grid', start: 'top 80%' } });
-
-  // Experiencias: tarjetas que se apilan
-  gsap.utils.toArray('.exp-card').forEach((c, i) => {
-    gsap.from(c, { y: 80, opacity: 0, rotateX: -12, duration: 1.1, ease: 'power3.out', scrollTrigger: { trigger: c, start: 'top 90%' } });
+  // Atardecer: el fondo pasa de arena a noche y aparecen las estrellas
+  ScrollTrigger.create({
+    trigger: '.dusk', start: 'top bottom', end: 'bottom bottom', scrub: true,
+    onUpdate: s => setSky(Math.max(0, (s.progress - 0.35) / 0.65)),
+    onLeave: () => setSky(1), onLeaveBack: () => setSky(0)
   });
+  ScrollTrigger.create({ trigger: '.night', start: 'top 60%', onEnter: () => setNight(true), onLeaveBack: () => setNight(false) });
+  gsap.fromTo('.dusk__line', { opacity: 0, y: 40 }, { opacity: 1, y: 0, ease: 'none', scrollTrigger: { trigger: '.dusk', start: 'top 60%', end: 'top 20%', scrub: true } });
+  gsap.fromTo('.dusk__big', { opacity: 0, scale: 0.9, letterSpacing: '0.08em' }, { opacity: 1, scale: 1, letterSpacing: '-0.02em', ease: 'none', scrollTrigger: { trigger: '.dusk', start: 'top 40%', end: 'center 40%', scrub: true } });
 
-  // Galería: revelado escalonado + parallax interno
-  gsap.utils.toArray('.g-item').forEach((g, i) => {
-    gsap.fromTo(g, { clipPath: 'inset(100% 0% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.3, ease: 'expo.out', delay: (i % 3) * 0.08, scrollTrigger: { trigger: g, start: 'top 92%' } });
-    if (!isMobile) gsap.fromTo(g.querySelector('img'), { yPercent: -8 }, { yPercent: 8, ease: 'none', scrollTrigger: { trigger: g, start: 'top bottom', end: 'bottom top', scrub: true } });
+  // Noche
+  gsap.from('.tonight, .showers li', { opacity: 0, y: 24, stagger: 0.1, duration: 1, scrollTrigger: { trigger: '.tonight', start: 'top 85%' } });
+  gsap.from('.cal', { opacity: 0, y: 50, duration: 1.2, ease: 'expo.out', scrollTrigger: { trigger: '.cal', start: 'top 85%' } });
+  gsap.from('.astro__card', { opacity: 0, y: 50, rotate: -2, duration: 1.2, ease: 'expo.out', scrollTrigger: { trigger: '.astro', start: 'top 70%' } });
+  gsap.from('.compare__row', { opacity: 0, y: 20, stagger: 0.08, duration: 0.8, scrollTrigger: { trigger: '.compare__table', start: 'top 82%' } });
+  gsap.utils.toArray('.g').forEach((g, i) => {
+    gsap.fromTo(g.querySelector('.g__img'), { clipPath: 'inset(100% 0 0 0)' }, { clipPath: 'inset(0% 0 0 0)', duration: 1.3, ease: 'expo.out', delay: (i % 3) * 0.06, scrollTrigger: { trigger: g, start: 'top 92%' } });
   });
+  gsap.from('.info__faq details', { opacity: 0, y: 16, stagger: 0.06, duration: 0.7, scrollTrigger: { trigger: '.info__faq', start: 'top 80%' } });
+  gsap.from('.finale > *', { opacity: 0, y: 40, stagger: 0.12, duration: 1.2, ease: 'expo.out', scrollTrigger: { trigger: '.finale', start: 'top 70%' } });
 
-  // Opiniones / reserva directa / ubicación / faq
-  gsap.from('.reviews__score > *', { y: 30, opacity: 0, stagger: 0.1, duration: 1, scrollTrigger: { trigger: '.reviews', start: 'top 80%' } });
-  gsap.from('.direct__card', { scale: 0.92, opacity: 0, duration: 1.2, ease: 'expo.out', scrollTrigger: { trigger: '.direct', start: 'top 80%' } });
-  gsap.from('.direct__grid > div', { y: 30, opacity: 0, stagger: 0.1, duration: 0.9, scrollTrigger: { trigger: '.direct__grid', start: 'top 85%' } });
-  gsap.from('.location__info > *', { y: 30, opacity: 0, stagger: 0.08, duration: 0.9, scrollTrigger: { trigger: '.location', start: 'top 75%' } });
-  gsap.from('.faq details', { y: 20, opacity: 0, stagger: 0.07, duration: 0.8, scrollTrigger: { trigger: '.faq', start: 'top 80%' } });
-
-  // Barra de progreso de lectura en el nav
-  gsap.to('.nav', { '--progress': 1, ease: 'none', scrollTrigger: { start: 0, end: 'max', scrub: true } });
-
-  window.addEventListener('load', () => ScrollTrigger.refresh());
+  addEventListener('load', () => ScrollTrigger.refresh());
 })();
